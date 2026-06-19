@@ -1,35 +1,49 @@
-var builder = WebApplication.CreateBuilder(args);
+using BookStoreApp.API.MVCS.Services.Implementations;
+using BookStoreApp.API.MVCS.Services.Interfaces;
+using Serilog;
+
+WebApplicationBuilder builder = WebApplication.CreateBuilder(args);
 
 // Add services to the container.
 // Learn more about configuring OpenAPI at https://aka.ms/aspnet/openapi
 builder.Services.AddOpenApi();
-builder.Services.AddControllers();
 
-var app = builder.Build();
+builder.Services.AddControllers();
+builder.Services.AddSwaggerGen();
+
+#region ADD_DEPENDENCY_INJECTION_SERVICES
+builder.Services
+    .AddScoped<IBookAppServices, BookAppServices>();
+#endregion ADD_DEPENDENCY_INJECTION_SERVICES
+
+
+// ADD SERILOG FOR LOGGING
+builder.Host.UseSerilog((ctx, lc) =>
+    lc.WriteTo.Console().ReadFrom.Configuration(ctx.Configuration)
+    );
+
+WebApplication app = builder.Build();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
     app.MapOpenApi();
 
-    // Add Swagger UI
-    app.UseSwaggerUI(options =>
-    {
-        // Point Swagger UI to the default .NET 10 OpenAPI document route
-        options.SwaggerEndpoint("/openapi/v1.json", "v1");
-    });
+    // ADD SWAGGER UI
+    app.UseSwagger();
+    app.UseSwaggerUI();
 }
 
 app.UseHttpsRedirection();
 
-var summaries = new[]
+string[] summaries = new[]
 {
     "Freezing", "Bracing", "Chilly", "Cool", "Mild", "Warm", "Balmy", "Hot", "Sweltering", "Scorching"
 };
 
 app.MapGet("/weatherforecast", () =>
 {
-    var forecast =  Enumerable.Range(1, 5).Select(index =>
+    var forecast = Enumerable.Range(1, 5).Select(index =>
         new WeatherForecast
         (
             DateOnly.FromDateTime(DateTime.Now.AddDays(index)),
@@ -40,6 +54,8 @@ app.MapGet("/weatherforecast", () =>
     return forecast;
 })
 .WithName("GetWeatherForecast");
+
+app.UseAuthorization();
 
 app.MapControllers();
 
